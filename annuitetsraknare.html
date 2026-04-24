@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Annuitetsräknare</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#ddd8ce;
+--text:#1a1814;--muted:#8a8278;--accent:#1a3a2a;--accent2:#c8973a;
+--green:#1a3a2a;--red:#8b2020;
+--shadow:0 2px 16px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.05);
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding:2rem 1rem 4rem}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+background-image:linear-gradient(rgba(0,0,0,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.015) 1px,transparent 1px);
+background-size:40px 40px}
+.container{max-width:740px;margin:0 auto;position:relative}
+header{margin-bottom:2.5rem;border-bottom:1px solid var(--border);padding-bottom:1.5rem}
+header .label{font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem}
+header h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,2.8rem);color:var(--accent);line-height:1.1}
+header h1 em{font-style:italic;color:var(--accent2)}
+.tabs{display:flex;margin-bottom:2rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;background:var(--surface2)}
+.tab{flex:1;padding:.6rem .5rem;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+text-align:center;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s;
+border-right:1px solid var(--border);line-height:1.3}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--accent);color:#fff}
+.tab:hover:not(.active){background:var(--border);color:var(--text)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+@media(max-width:520px){.grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.35rem}
+.field label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.field .input-wrap{position:relative;display:flex;align-items:center}
+.field input{width:100%;padding:.7rem 2.5rem .7rem .85rem;font-family:'DM Mono',monospace;font-size:.92rem;
+background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--text);
+transition:border-color .15s,box-shadow .15s;-moz-appearance:textfield}
+.field input::-webkit-inner-spin-button,.field input::-webkit-outer-spin-button{-webkit-appearance:none}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,58,42,.08)}
+.field input.disabled-field{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.field .unit{position:absolute;right:.75rem;font-size:.7rem;color:var(--muted);pointer-events:none}
+.field .hint{font-size:.6rem;color:var(--muted);letter-spacing:.05em;font-style:italic}
+.paytype-wrap{margin-bottom:1rem}
+.paytype-label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+.paytype-btns{display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.paytype-btn{flex:1;padding:.7rem .85rem;font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.06em;
+border:none;cursor:pointer;transition:all .15s;text-align:left;line-height:1.5}
+.paytype-btn .pt-title{display:block;font-weight:500}
+.paytype-btn .pt-sub{display:block;font-size:.58rem;opacity:.75;font-style:italic}
+.paytype-btn.active{background:var(--accent);color:#fff}
+.paytype-btn:not(.active){background:var(--surface2);color:var(--muted);border-right:1px solid var(--border)}
+.paytype-btn:not(.active):hover{background:var(--border);color:var(--text)}
+.paytype-hint{font-size:.6rem;color:var(--muted);letter-spacing:.05em;font-style:italic;margin-top:.35rem}
+.btn-row{margin:1.5rem 0 0}
+.solve-btn{width:100%;padding:.85rem 2rem;font-family:'DM Serif Display',serif;font-size:1.05rem;
+background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;
+letter-spacing:.03em;transition:background .2s,transform .1s}
+.solve-btn:hover{background:#254d38}
+.solve-btn:active{transform:scale(.99)}
+.result-card{margin-top:1.8rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;
+box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:opacity .3s,transform .3s}
+.result-card.show{opacity:1;transform:translateY(0)}
+.result-header{background:var(--accent);padding:1rem 1.4rem;display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap}
+.result-header .r-label{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.result-header .r-value{font-family:'DM Serif Display',serif;font-size:2rem;color:#fff;letter-spacing:.01em}
+.result-header .r-unit{font-size:.75rem;color:rgba(255,255,255,.6)}
+.result-rows{background:var(--surface);padding:1rem 0}
+.r-row{display:flex;justify-content:space-between;align-items:baseline;padding:.55rem 1.4rem;
+border-bottom:1px solid var(--surface2);font-size:.8rem}
+.r-row:last-child{border-bottom:none}
+.r-row .r-key{color:var(--muted);letter-spacing:.05em}
+.r-row .r-val{font-weight:500}
+.r-row .r-val.neg{color:var(--red)}
+.table-wrap{margin-top:1.5rem;border:1px solid var(--border);border-radius:4px;overflow:hidden;
+box-shadow:var(--shadow);display:none}
+.table-wrap.show{display:block}
+.table-head{display:flex;justify-content:space-between;align-items:center;padding:.7rem 1.2rem;
+background:var(--surface2);border-bottom:1px solid var(--border)}
+.table-head span{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.toggle-table{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;background:none;
+border:1px solid var(--border);border-radius:2px;padding:.25rem .6rem;color:var(--muted);cursor:pointer}
+.toggle-table:hover{color:var(--accent);border-color:var(--accent)}
+.amort-table{width:100%;border-collapse:collapse;font-size:.73rem}
+.amort-table th{background:var(--surface2);padding:.45rem .8rem;text-align:right;font-weight:400;
+font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+.amort-table th:first-child{text-align:left}
+.amort-table td{padding:.4rem .8rem;text-align:right;border-bottom:1px solid var(--surface2)}
+.amort-table td:first-child{text-align:left;color:var(--muted)}
+.amort-table tr:last-child td{border-bottom:none}
+.amort-table tr:hover td{background:var(--surface2)}
+.amort-table .interest-cell{color:#8b4513}
+.amort-table .principal-cell{color:var(--green)}
+.amort-table .balance-cell{font-weight:500}
+.amort-table .prepay-row td{background:#f0f7f3 !important;font-style:italic;color:var(--muted)}
+.error-msg{margin-top:1rem;padding:.7rem 1rem;background:#fff0f0;border:1px solid #f5c0c0;
+border-radius:3px;font-size:.75rem;color:var(--red);display:none}
+.error-msg.show{display:block}
+.table-body-wrap{max-height:340px;overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+<div class="label">Finansiellt verktyg</div>
+<h1>Annuitets<em>räknare</em></h1>
+</header>
+
+<div class="tabs">
+<button class="tab active" onclick="setMode('annuitet')">Räkna<br>Annuitet</button>
+<button class="tab" onclick="setMode('ranta')">Räkna<br>Ränta</button>
+<button class="tab" onclick="setMode('period')">Räkna<br>Perioder</button>
+<button class="tab" onclick="setMode('restvarde')">Räkna<br>Restvärde</button>
+<button class="tab" onclick="setMode('fast_restvarde')">Fast<br>Restvärde</button>
+</div>
+
+<div class="grid">
+<div class="field">
+<label>Lånebelopp (PV)</label>
+<div class="input-wrap">
+<input type="number" id="pv" placeholder="ex. 500 000" min="0">
+<span class="unit">kr</span>
+</div>
+</div>
+<div class="field">
+<label>Årsränta</label>
+<div class="input-wrap">
+<input type="number" id="rate" placeholder="ex. 5" min="0" max="100" step="0.01">
+<span class="unit">%</span>
+</div>
+</div>
+<div class="field">
+<label>Antal perioder</label>
+<div class="input-wrap">
+<input type="number" id="n" placeholder="ex. 36" min="1">
+<span class="unit" id="n-unit">mån</span>
+</div>
+</div>
+<div class="field">
+<label>Betalningsfrekvens</label>
+<div class="input-wrap">
+<select id="freq" style="width:100%;padding:.7rem .85rem;font-family:'DM Mono',monospace;font-size:.85rem;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--text);cursor:pointer;" onchange="clearResults()">
+<option value="12">Månadsvis</option>
+<option value="4">Kvartalsvis</option>
+<option value="2">Halvårsvis</option>
+<option value="1">Årsvis</option>
+</select>
+</div>
+</div>
+<div class="field">
+<label id="solve-label">Annuitet (PMT)</label>
+<div class="input-wrap">
+<input type="number" id="pmt" placeholder="räknas ut" min="0">
+<span class="unit">kr</span>
+</div>
+</div>
+<div class="field">
+<label>Restvärde (FV)</label>
+<div class="input-wrap">
+<input type="number" id="fv" placeholder="0 = amortera helt" step="1">
+<span class="unit">kr</span>
+</div>
+<span class="hint">Positivt = ballongbetalning / kvarvarande skuld</span>
+</div>
+</div>
+
+<!-- Payment type -->
+<div class="paytype-wrap">
+<div class="paytype-label">Betalningstyp</div>
+<div class="paytype-btns">
+<button class="paytype-btn active" id="btn-efterskott" onclick="setPayType('efterskott')">
+<span class="pt-title">EFTERSKOTT</span>
+<span class="pt-sub">Avbetalning — betalning i slutet av perioden</span>
+</button>
+<button class="paytype-btn" id="btn-forskott" onclick="setPayType('forskott')">
+<span class="pt-title">FÖRSKOTT</span>
+<span class="pt-sub">Leasing — betalning i början av perioden</span>
+</button>
+</div>
+<div class="paytype-hint" id="paytype-hint">
+Ränta löper under perioden, betalning sker i slutet. Typiskt för lån och avbetalning.
+</div>
+</div>
+
+<div class="btn-row">
+<button class="solve-btn" onclick="calculate()">Beräkna →</button>
+</div>
+
+<div class="error-msg" id="error"></div>
+
+<div class="result-card" id="result-card">
+<div class="result-header">
+<div>
+<div class="r-label" id="res-label">Annuitet</div>
+<div>
+<span class="r-value" id="res-value">—</span>
+<span class="r-unit" id="res-unit">kr/mån</span>
+</div>
+</div>
+</div>
+<div class="result-rows" id="result-rows"></div>
+</div>
+
+<div class="table-wrap" id="table-wrap">
+<div class="table-head">
+<span>Amorteringsplan</span>
+<button class="toggle-table" onclick="toggleTable()">Dölj tabell</button>
+</div>
+<div class="table-body-wrap">
+<table class="amort-table">
+<thead>
+<tr>
+<th>Period</th>
+<th>Betalning</th>
+<th>Ränta</th>
+<th>Amortering</th>
+<th>Saldo</th>
+</tr>
+</thead>
+<tbody id="amort-body"></tbody>
+</table>
+</div>
+</div>
+
+</div>
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let currentMode = 'annuitet';
+let payType = 'efterskott'; // 'efterskott' | 'forskott'
+let tableVisible = true;
+
+const MODES = {
+  annuitet: { solve: 'pmt', label: 'Annuitet (PMT)' },
+  ranta: { solve: 'rate', label: 'Årsränta' },
+  period: { solve: 'n', label: 'Antal perioder' },
+  restvarde: { solve: 'fv', label: 'Restvärde (FV)' },
+  fast_restvarde: { solve: 'pv', label: 'Lånebelopp (PV)' },
+};
+
+// ── UI helpers ──────────────────────────────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', Object.keys(MODES)[i] === mode);
+  });
+  const cfg = MODES[mode];
+  ['pv', 'rate', 'n', 'pmt', 'fv'].forEach(id => {
+    const el = document.getElementById(id);
+    const disable = (id === cfg.solve);
+    el.disabled = disable;
+    el.classList.toggle('disabled-field', disable);
+    if (disable) { el.value = ''; el.placeholder = 'räknas ut'; }
+  });
+  clearResults();
+}
+
+function setPayType(pt) {
+  payType = pt;
+  const isForskott = pt === 'forskott';
+  document.getElementById('btn-efterskott').classList.toggle('active', !isForskott);
+  document.getElementById('btn-forskott').classList.toggle('active', isForskott);
+  document.getElementById('paytype-hint').textContent = isForskott
+    ? 'Betalning sker i början av perioden — ingen ränta på första betalningen. Typiskt för leasing.'
+    : 'Ränta löper under perioden, betalning sker i slutet. Typiskt för lån och avbetalning.';
+  clearResults();
+}
+
+function clearResults() {
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('table-wrap').classList.remove('show');
+  document.getElementById('error').classList.remove('show');
+}
+
+function showError(msg) {
+  const el = document.getElementById('error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+// ── Core math ───────────────────────────────────────────────────────────
+function pmtImmediate(pv, r, n, fv) {
+  if (r === 0) return (pv - fv) / n;
+  const f = Math.pow(1 + r, n);
+  return (pv - fv / f) * r / (1 - 1 / f);
+}
+
+function calcPMT(pv, r, n, fv, due) {
+  const pmt = pmtImmediate(pv, r, n, fv);
+  return due ? pmt / (1 + r) : pmt;
+}
+
+function calcPV(pmt, r, n, fv, due) {
+  const pmtImm = due ? pmt * (1 + r) : pmt;
+  if (r === 0) return pmtImm * n + fv;
+  const f = Math.pow(1 + r, n);
+  return pmtImm * (1 - 1 / f) / r + fv / f;
+}
+
+function calcFV(pv, pmt, r, n, due) {
+  const pmtImm = due ? pmt * (1 + r) : pmt;
+  if (r === 0) return pv - pmtImm * n;
+  const f = Math.pow(1 + r, n);
+  return pv * f - pmtImm * (f - 1) / r;
+}
+
+function calcN(pv, pmt, r, fv, due) {
+  const pmtImm = due ? pmt * (1 + r) : pmt;
+  if (r === 0) return (pv - fv) / pmtImm;
+  let lo = 1, hi = 10000;
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    const p = pmtImmediate(pv, r, mid, fv);
+    if (p > pmtImm) hi = mid; else lo = mid;
+    if (hi - lo < 0.0001) break;
+  }
+  return (lo + hi) / 2;
+}
+
+function calcRate(pv, pmt, n, fv, due) {
+  let r = 0.005;
+  for (let i = 0; i < 200; i++) {
+    const pmtImm = due ? pmt * (1 + r) : pmt;
+    const f = Math.pow(1 + r, n);
+    const calc = (pv - fv / f) * r / (1 - 1 / f) - pmtImm;
+    const dr = 1e-8;
+    const pmtImmb = due ? pmt * (1 + r + dr) : pmt;
+    const fb = Math.pow(1 + r + dr, n);
+    const calcb = (pv - fv / fb) * (r + dr) / (1 - 1 / fb) - pmtImmb;
+    const deriv = (calcb - calc) / dr;
+    if (Math.abs(deriv) < 1e-15) break;
+    const rn = r - calc / deriv;
+    if (Math.abs(rn - r) < 1e-12) { r = rn; break; }
+    r = Math.max(1e-8, rn);
+  }
+  return r;
+}
+
+// ── Main calculate ──────────────────────────────────────────────────────
+function calculate() {
+  clearResults();
+  const freq = parseFloat(document.getElementById('freq').value);
+  const mode = currentMode;
+  const due = payType === 'forskott';
+
+  let pv = parseFloat(document.getElementById('pv').value);
+  let rate = parseFloat(document.getElementById('rate').value);
+  let n = parseFloat(document.getElementById('n').value);
+  let pmt = parseFloat(document.getElementById('pmt').value);
+  let fv = parseFloat(document.getElementById('fv').value) || 0;
+
+  let r = (rate / 100) / freq;
+
+  const need = {
+    annuitet: ['pv', 'rate', 'n'],
+    ranta: ['pv', 'n', 'pmt'],
+    period: ['pv', 'rate', 'pmt'],
+    restvarde: ['pv', 'rate', 'n', 'pmt'],
+    fast_restvarde: ['rate', 'n', 'pmt', 'fv'],
+  };
+  const vals = { pv, rate, n, pmt, fv };
+  for (const key of need[mode]) {
+    if (Number.isNaN(vals[key])) { showError('Fyll i: ' + key.toUpperCase()); return; }
+  }
+
+  let r_use = r;
+  try {
+    if (mode === 'annuitet') {
+      pmt = calcPMT(pv, r, n, fv, due);
+    } else if (mode === 'ranta') {
+      r_use = calcRate(pv, pmt, n, fv, due);
+      rate = r_use * freq * 100;
+    } else if (mode === 'period') {
+      n = calcN(pv, pmt, r, fv, due);
+    } else if (mode === 'restvarde') {
+      fv = calcFV(pv, pmt, r, n, due);
+    } else if (mode === 'fast_restvarde') {
+      pv = calcPV(pmt, r, n, fv, due);
+    }
+  } catch (e) {
+    showError('Beräkning misslyckades. Kontrollera värdena.');
+    return;
+  }
+
+  if (!isFinite(pmt) || !isFinite(pv) || !isFinite(fv) || Number.isNaN(n)) {
+    showError('Ogiltigt resultat — kontrollera dina värden.');
+    return;
+  }
+
+  const totalPaid = pmt * Math.ceil(n);
+  const totalInterest = totalPaid - (pv - fv);
+
+  const cfg = MODES[mode];
+  let displayVal, displayUnit;
+  if (mode === 'annuitet') { displayVal = pmt; displayUnit = freqLabel(freq); }
+  else if (mode === 'ranta') { displayVal = rate; displayUnit = '% / år'; }
+  else if (mode === 'period') { displayVal = n; displayUnit = freqLabel2(freq); }
+  else if (mode === 'restvarde') { displayVal = fv; displayUnit = 'kr'; }
+  else { displayVal = pv; displayUnit = 'kr'; }
+
+  document.getElementById('res-label').textContent = cfg.label;
+  document.getElementById('res-value').textContent = fmt(displayVal, mode === 'ranta' ? 4 : mode === 'period' ? 1 : 2);
+  document.getElementById('res-unit').textContent = displayUnit;
+
+  const rows = [
+    ['Lånebelopp (PV)', fmt(pv, 2) + ' kr'],
+    ['Årsränta (nominell)', fmt(rate, 4) + ' %'],
+    ['Månadsränta', fmt(r_use * 100, 4) + ' %'],
+    ['Antal perioder', fmt(n, 1) + ' × ' + freqLabel2(freq)],
+    ['Betalningstyp', due ? 'Förskott (leasing)' : 'Efterskott (avbetalning)'],
+    ['Annuitet', fmt(pmt, 2) + ' kr'],
+    ['Restvärde (FV)', fmt(fv, 2) + ' kr'],
+    ['Total betalning', fmt(totalPaid, 2) + ' kr'],
+    ['Varav ränta', fmt(totalInterest, 2) + ' kr'],
+  ];
+
+  document.getElementById('result-rows').innerHTML = rows.map(([k, v]) => {
+    const cls = (k.includes('ränta') && !k.includes('nominell')) ? 'neg' : (k.includes('Varav') ? 'neg' : '');
+    return `<div class="r-row"><span class="r-key">${k}</span><span class="r-val ${cls}">${v}</span></div>`;
+  }).join('');
+
+  document.getElementById('result-card').classList.add('show');
+
+  const nInt = Math.ceil(n);
+  const maxRows = Math.min(nInt, 600);
+  const tbody = document.getElementById('amort-body');
+  tbody.innerHTML = '';
+
+  let balance = pv;
+
+  if (due) {
+    balance -= pmt;
+    const tr0 = document.createElement('tr');
+    tr0.className = 'prepay-row';
+    tr0.innerHTML = `<td>0 <span style="font-size:.6rem">(förskott)</span></td><td>${fmt(pmt, 2)}</td><td class="interest-cell">0,00</td><td class="principal-cell">${fmt(pmt, 2)}</td><td class="balance-cell">${fmt(balance, 2)}</td>`;
+    tbody.appendChild(tr0);
+
+    const remainPeriods = nInt - 1;
+    for (let i = 1; i <= Math.min(remainPeriods, maxRows - 1); i++) {
+      const interest = balance * r_use;
+      const isLast = i === remainPeriods;
+      let principal = isLast ? balance - fv : pmt - interest;
+      balance -= principal;
+      if (isLast && Math.abs(balance - fv) < 0.005) balance = fv;
+
+      const displayPmt2 = interest + principal;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i}</td><td>${fmt(displayPmt2, 2)}</td><td class="interest-cell">${fmt(interest, 2)}</td><td class="principal-cell">${fmt(principal, 2)}</td><td class="balance-cell">${fmt(balance, 2)}</td>`;
+      tbody.appendChild(tr);
+    }
+  } else {
+    for (let i = 1; i <= maxRows; i++) {
+      const interest = balance * r_use;
+      const isLast = i === nInt;
+      let principal = isLast ? balance - fv : pmt - interest;
+      balance -= principal;
+      if (isLast && Math.abs(balance - fv) < 0.005) balance = fv;
+
+      const displayPmt2 = interest + principal;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i}</td><td>${fmt(displayPmt2, 2)}</td><td class="interest-cell">${fmt(interest, 2)}</td><td class="principal-cell">${fmt(principal, 2)}</td><td class="balance-cell">${fmt(balance, 2)}</td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  if (nInt > 600) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="5" style="text-align:center;color:var(--muted);font-style:italic;padding:.6rem">… ${nInt - 600} perioder dolda</td>`;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('table-wrap').classList.add('show');
+  tableVisible = true;
+  document.querySelector('.toggle-table').textContent = 'Dölj tabell';
+}
+
+function toggleTable() {
+  tableVisible = !tableVisible;
+  document.querySelector('.table-body-wrap').style.display = tableVisible ? '' : 'none';
+  document.querySelector('.toggle-table').textContent = tableVisible ? 'Dölj tabell' : 'Visa tabell';
+}
+
+function freqLabel(f) { return { 12: 'kr/mån', 4: 'kr/kvartal', 2: 'kr/halvår', 1: 'kr/år' }[f] || 'kr'; }
+function freqLabel2(f) { return { 12: 'månader', 4: 'kvartal', 2: 'halvår', 1: 'år' }[f] || 'perioder'; }
+function fmt(x, dec = 0) {
+  if (Number.isNaN(x) || !isFinite(x)) return '—';
+  return x.toLocaleString('sv-SE', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+setMode('annuitet');
+</script>
+
+</body>
+</html>
